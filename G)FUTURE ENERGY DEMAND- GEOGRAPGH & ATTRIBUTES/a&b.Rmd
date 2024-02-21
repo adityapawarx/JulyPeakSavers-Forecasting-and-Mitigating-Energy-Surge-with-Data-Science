@@ -1,0 +1,86 @@
+
+
+```{r}
+file <- '/Users/subhiksha/Downloads/Final_Merged_For_Shiny_Geo.csv'
+library(tidyverse)
+peak_energy_file <- read_csv(file)
+
+table(peak_energy_file$in.occupants)
+
+
+nrow(peak_energy_file)
+#colnames(peak_energy_file)
+summary(peak_energy_file$out.total_energy_consumption)
+summary(peak_energy_file$Next_year_Pred)
+#unique(peak_energy_file$in.county)
+
+# Load necessary libraries
+library(dplyr)
+library(ggplot2)
+library(readr)
+
+# Data aggregation
+grouped_data <- peak_energy_file %>%
+  group_by(time_split, in.county) %>%
+  summarize(Total_Energy_Demand = sum(Next_year_Pred, na.rm = TRUE),
+            Avg_Latitude = mean(in.weather_file_latitude, na.rm = TRUE),
+            Avg_Longitude = mean(in.weather_file_longitude, na.rm = TRUE),
+            City_Name = first(in.weather_file_city[!is.na(in.weather_file_city)])) %>%
+  ungroup()
+
+grouped_data1 <- grouped_data[grouped_data$City_Name == 'Anderson Rgnl',]
+class(grouped_data$Total_Energy_Demand)
+#grouped_data$Total_Energy_Demand <round(grouped_data$Total_Energy_Demand)
+min(grouped_data$Total_Energy_Demand)
+max(grouped_data$Total_Energy_Demand)
+
+summary(grouped_data$Total_Energy_Demand)
+unique(grouped_data$City_Name)
+
+
+
+region_time_summaries <- grouped_data %>%
+  group_by(City_Name, time_split) %>%
+  summarise(Total_Energy_Demand = max(Total_Energy_Demand))
+
+# Checking the result
+print(region_time_summaries)
+
+
+
+# Create the line plot a)
+  ggplot(region_time_summaries, aes(x = time_split, y = Total_Energy_Demand, group = City_Name, color = City_Name)) +
+  geom_line() +
+  geom_point() +
+  ggtitle("Future Energy Demand by Time Split Across Geographic Regions") +
+  xlab("Time Split") +
+  ylab("Total Energy Demand") +
+  theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+
+# Data aggregation
+grouped_data1 <- peak_energy_file %>%
+  group_by(time_split,in.cooling_setpoint ) %>%
+  summarize(Total_Energy_Demand = max(Next_year_Pred, na.rm = TRUE),) %>%
+  ungroup()
+
+
+
+# Create the line plot b)
+  ggplot(grouped_data1, aes(x = time_split, y = Total_Energy_Demand, group = in.cooling_setpoint, color = in.cooling_setpoint)) +
+  geom_line() +
+  geom_point() +
+  ggtitle("Cumulative Future Energy Demand Vs Time Split by cooling setpoint") +
+  xlab("Time Split") +
+  ylab("Total Energy Demand") +
+  theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+```
+
+
+
+

@@ -1,0 +1,190 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(tidyverse)
+library(arrow)
+data <- read_csv("C:/Users/hp/Desktop/IDS Project/Merged_data.csv")
+```
+
+
+```{r}
+summary(data)
+
+```
+
+
+```{r}
+str(data)
+```
+
+
+```{r}
+#Analyze the missing values in each column.
+sapply(data, function(x) sum(is.na(x)))
+#There are no missing values
+```
+
+
+```{r}
+# Check the correlation between numeric variables, especially those related to energy consumption and weather parameters.
+cor_data <- data[, sapply(data, is.numeric)]  # select only numeric columns
+cor_matrix <- cor(cor_data, use = "complete.obs")
+cor_matrix
+
+
+#Show the output in the form of graph
+```
+
+
+```{r}
+
+#Visualize the distribution of a particular numeric variable like #energy consumption.In this case we are looking at the #toal_energy_consumption.It is left skewed as most of the phenomenons
+#in the world
+hist(data$out.total_energy_consumption, main="Distribution of Total Energy Consumption", xlab="Total Energy Consumption")
+
+
+```
+
+
+```{r}
+#Compare the energy consumption across different times of the day or #climate zones.
+
+boxplot(data$out.total_energy_consumption ~ data$time_split, main="Energy Consumption by Time of Day", xlab="Time of Day", ylab="Total Energy Consumption")
+
+#This helps us under that in the morning during the busy hours the
+#energy consumption is more
+
+```
+
+
+```{r}
+
+#Giving Time Series Analysis a try as the dataset has a time component, plot the time series data.
+library(ggplot2)
+ggplot(data, aes(x=as.POSIXct(time_range.x, format="%H:%M:%S"), y=out.total_energy_consumption)) + geom_line() + labs(x="Time", y="Total Energy Consumption")
+
+
+#How is this kind of graph helpful??
+
+```
+
+
+```{r}
+#Geographical Analysis: If location data is available, plot the data points on a map.
+
+library(ggplot2)
+library(maps)
+ggmap <- map_data("state")
+ggplot() + geom_polygon(data = ggmap, aes(x = long, y = lat, group = group)) + geom_point(data = data, aes(x = longitude, y = latitude), color = "red", size = 1)
+
+#Not sure why this went wrong
+
+```
+
+
+
+```{r}
+install.packages("factoextra")
+
+```
+
+
+```{r}
+#Principal Component Analysis (PCA): Use PCA for dimensionality reduction, especially if the dataset has many numeric variables.
+library(factoextra)
+num_data <- data[, sapply(data, is.numeric)]  # select numeric columns
+pca_result <- prcomp(num_data, scale. = TRUE)
+fviz_pca_ind(pca_result)
+
+
+```
+
+
+```{r}
+install.packages("GGally")
+
+```
+
+```{r}
+#Pairwise Plot: Visualize relationships between all pairs of numeric variables.
+library(GGally)
+num_data <- data[, sapply(data, is.numeric)]
+ggpairs(num_data)
+
+
+
+```
+
+
+```{r}
+#Heatmap: Visualize the correlation matrix or any large matrix data.
+library(ggplot2)
+library(reshape2)
+cor_melted <- melt(cor_matrix)
+ggplot(cor_melted, aes(Var1, Var2, fill=value)) + geom_tile()
+```
+
+
+```{r}
+#Cluster Analysis: Perform cluster analysis to identify groups or patterns in the data.
+
+library(cluster)
+num_data <- data[, sapply(data, is.numeric)]
+clusters <- kmeans(num_data, 3)
+plot(num_data, col=clusters$cluster)
+```
+
+
+```{r}
+#Time Series Decomposition: If you have time series data, decompose it to analyze trends and seasonality.
+
+library(forecast)
+ts_data <- ts(data$out.total_energy_consumption, frequency=365)
+decomposed_ts <- stl(ts_data, s.window="periodic")
+plot(decomposed_ts)
+
+```
+
+
+```{r}
+#Density Plot: To see the distribution of a particular variable.
+library(ggplot2)
+ggplot(data, aes(x=out.total_energy_consumption)) + geom_density(fill="blue")
+```
+
+
+```{r}
+#Bar Plot for Categorical Data: Analyze the frequency of different categories in a categorical variable.
+ggplot(data, aes(x=in.building_america_climate_zone)) + geom_bar()
+```
+
+
+```{r}
+#Multivariate Analysis: Analyze relationships between multiple variables.
+pairs(~out.total_energy_consumption + in.sqft + in.bedrooms, data=data, main="Multivariate Analysis")
+
+
+```
+
+
+```{r}
+#Scatter Plot with Regression Line: To see the relationship between two variables and fit a regression line.
+ggplot(data, aes(x=some_numeric_variable, y=out.total_energy_consumption)) + geom_point() + geom_smooth(method=lm)
+```
+
+
+```{r}
+#Interactive Plots with Plotly: Create interactive plots for more detailed exploration.
+library(plotly)
+p <- ggplot(data, aes(x=out.total_energy_consumption, y=in.sqft)) + geom_point()
+ggplotly(p)
+```
+
+

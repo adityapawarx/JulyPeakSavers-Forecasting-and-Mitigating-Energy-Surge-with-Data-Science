@@ -1,0 +1,102 @@
+---
+title: "Modeling_XGBoost"
+output: html_document
+date: "2023-12-04"
+---
+
+```{r}
+library(tidyverse)
+#Source<- "https://www.projectpro.io/recipes/apply-xgboost-r-for-regression"
+Modeling_df <- read_csv("C:/Users/Soundarya Ravi/Desktop/Shiny/final_modeling_df.csv")
+```
+```{r}
+#install.packages('xgboost')     # for fitting the xgboost model
+#install.packages('caret')       # for general data preparation and model fitting
+library(xgboost)
+library(caret)  
+```
+```{r}
+#Clear NA before Modeling
+Modeling_df <- Modeling_df[, colSums(is.na(Modeling_df)) == 0]
+```
+
+```{r}
+# Test and Train Data
+set.seed(0) # Set seed for generating random data.
+# CreateDataPartition() function from the caret package to split the original dataset into a training and testing set
+# Split data into training (80%) and testing set (20%)
+parts <- createDataPartition(Modeling_df$out.total_energy_consumption, p = 0.8, list = FALSE)
+train <- Modeling_df[parts,]
+test <-  Modeling_df[-parts,]
+ # Define predictor and response variables in the training set
+train_x <- data.matrix(train[, -which(names(train) == "out.total_energy_consumption")])
+train_y <- train[["out.total_energy_consumption"]]
+
+# Define predictor and response variables in the testing set
+test_x <- data.matrix(test[, -which(names(train) == "out.total_energy_consumption")])
+test_y <- test[["out.total_energy_consumption"]]
+
+print(c("Length of train_y:", length(train_y)))
+print(c("Number of rows in train_x:", nrow(train_x)))
+
+# Check if lengths match before creating xgb.DMatrix
+stopifnot(length(train_y) == nrow(train_x))
+
+# Continue with the rest of your code...
+#define final training and testing sets
+xgb_train = xgb.DMatrix(data = train_x, label = train_y)
+xgb_test = xgb.DMatrix(data = test_x, label = test_y)
+
+
+
+```
+
+```{r}
+#defining a watchlist
+watchlist = list(train=xgb_train, test=xgb_test)
+
+#fit XGBoost model and display training and testing data at each iteartion
+model = xgb.train(data = xgb_train, max.depth = 3, watchlist=watchlist, nrounds = 100)
+```
+
+```{r}
+#define final model
+model_xgboost = xgboost(data = xgb_train, max.depth = 3, nrounds = 86, verbose = 0)
+
+summary(model_xgboost)
+```
+
+```{r}
+#use model to make predictions on test data
+pred_y = predict(model_xgboost, xgb_test)
+```
+
+
+```{r}
+# Assuming pred_y is your predicted values
+
+# Calculate Mean Squared Error (MSE)
+mse <- mean((test_y - pred_y)^2)
+cat('Mean Squared Error (MSE): ', round(mse, 3), '\n')
+
+# Calculate Root Mean Squared Error (RMSE) using caret package
+rmse <- caret::RMSE(test_y, pred_y)
+cat('Root Mean Squared Error (RMSE): ', round(rmse, 3), '\n')
+
+# Calculate R-squared
+y_test_mean <- mean(test_y)
+tss <- sum((test_y - y_test_mean)^2)
+rss <- sum((test_y - pred_y)^2)  # Using predicted values to calculate residuals
+rsq <- 1 - (rss/tss)
+cat('The R-squared of the test data is ', round(rsq, 3), '\n')
+
+```
+```{r}
+predictions_xgb <- predict(model_xgboost, newdata = xgb_test)
+
+mape <- mean(abs((test$out.total_energy_consumption - predictions_xgb) / test$out.total_energy_consumption )) * 100
+
+# Print the result
+print(paste("MAPE:", mape))
+```
+

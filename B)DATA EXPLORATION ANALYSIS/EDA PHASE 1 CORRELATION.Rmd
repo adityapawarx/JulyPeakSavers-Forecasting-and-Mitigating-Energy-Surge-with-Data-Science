@@ -1,0 +1,194 @@
+---
+title: "CORRELATION PHASE 1"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r}
+library(tidyverse)
+Final_team2_Modelling_SEW <- read_csv("C:/Users/Soundarya Ravi/Desktop/Shiny/Team2_Final_SEW_Ordinal_Modelling1.csv")
+
+```
+
+```{r}
+# Assuming your dataframe is named Final_team2_Modelling_SEW
+
+# Select numeric columns only
+numeric_columns <- Final_team2_Modelling_SEW[sapply(Final_team2_Modelling_SEW, is.numeric)]
+
+# Calculate correlation matrix
+correlation_matrix <- cor(numeric_columns)
+
+# Print the correlation matrix
+print(correlation_matrix)
+
+```
+
+
+
+```{r}
+# Install corrplot package if not installed
+# install.packages("corrplot")
+
+# Load the corrplot package
+library(corrplot)
+
+# Assuming your dataframe is named Final_team2_Modelling_SEW
+
+# Select numeric columns only
+numeric_columns <- Final_team2_Modelling_SEW[sapply(Final_team2_Modelling_SEW, is.numeric)]
+
+# Remove rows with missing values
+numeric_columns <- na.omit(numeric_columns)
+
+# Calculate correlation matrix
+correlation_matrix <- cor(numeric_columns)
+# Set a threshold for correlation values
+threshold <- 0.4
+
+# Filter correlation matrix for values above the threshold
+filtered_correlation_matrix <- correlation_matrix * (abs(correlation_matrix) > threshold)
+
+
+# Plot the correlation matrix using corrplot without hierarchical clustering
+corrplot(
+  filtered_correlation_matrix,
+  method = "color",            # Color-coded plot
+  type = "upper",              # Show only upper triangle to avoid redundancy
+  tl.cex = 0.7,                 # Text label size
+  tl.col = "black",             # Text label color
+  col = colorRampPalette(c("#FFFFFF", "#009688", "#004D40"))(100),  # Green color palette
+  addCoef.col = "black",        # Coefficient color
+  number.cex = 0.6             # Correlation coefficient text size
+)
+
+
+
+```
+```{r}
+# Visualize a subset of the correlation matrix
+sub_cor_matrix <- correlation_matrix[1:10, 1:10]  # Adjust the range as needed
+
+# Plot the subset
+corrplot(sub_cor_matrix, method = "color")
+
+```
+
+```{r}
+# Save correlation matrix to a CSV file
+setwd("C:/Users/Soundarya Ravi/Desktop/Shiny")
+write.csv(correlation_matrix, file = "correlation_matrix1.csv", row.names=FALSE)
+
+```
+
+```{r}
+
+# Assuming your dataframe is named Final_team2_Modelling_SEW
+
+# Select specific columns for correlation
+selected_columns <- Final_team2_Modelling_SEW[, c(
+  "time_split_numeric",
+  "in.sqft",
+  "in.bedrooms",
+  "in.clothes_dryer",
+  "in.clothes_washer",
+  "in.cooling_setpoint",
+  "in.federal_poverty_level",
+  "in.geometry_floor_area",
+  "in.geometry_floor_area_bin",
+  "in.geometry_garage",
+  "in.heating_setpoint",
+  "in.hot_water_fixtures",
+  "in.income",
+  "in.misc_hot_tub_spa",
+  "in.misc_pool",
+  "in.misc_hot_tub_spa",
+  "in.misc_pool",
+  "in.misc_pool_heater",
+  "in.misc_pool_pump",
+  "in.occupants",
+  "in.plug_load_diversity",
+  "in.usage_level",
+  "upgrade.water_heater_efficiency",
+  "upgrade.clothes_dryer",
+  "upgrade.cooking_range",
+  "out.kitchen_energy_consumption",
+  "out.laundry_energy_consumption",
+  "out.heating_cooling_energy_consumption",
+  "out.water_heating_energy_consumption",
+  "out.electrical_appliances_energy_consumption",
+  "out.outdoor_appliances_energy_consumption",
+  "Dry_Bulb_Temperature_C",
+  "Wind_Speed_m_s",
+  "Wind_Direction_Deg",
+  "Diffuse_Horizontal_Radiation_W_m2"
+)]
+
+# Impute missing values with the mean of each column
+selected_columns <- apply(selected_columns, 2, function(x) ifelse(is.na(x), mean(x, na.rm = TRUE), x))
+
+# Calculate correlation matrix for the selected columns
+correlation_matrix <- cor(selected_columns)
+
+# Create heatmap
+heatmap(correlation_matrix)
+
+
+```
+```{r}
+# Assuming your dataframe is named Final_team2_Modelling_SEW
+
+# Create a numeric mapping for time_split
+time_split_mapping <- c(
+  "Late Night" = 1,
+  "Early Morning" = 2,
+  "Morning" = 3,
+  "Noon" = 4,
+  "Evening" = 5,
+  "Night" = 6
+)
+
+# Convert time_split to numeric using the mapping
+Final_team2_Modelling_SEW$time_split_numeric <- as.numeric(factor(Final_team2_Modelling_SEW$time_split, levels = names(time_split_mapping), labels = time_split_mapping))
+
+# Display the updated dataframe
+head(Final_team2_Modelling_SEW)
+
+```
+```{r}
+threshold <- 0.5
+
+# Filter correlation matrix for values above the threshold
+filtered_correlation_matrix <- correlation_matrix * (abs(correlation_matrix) > threshold)
+
+
+# Plot the correlation matrix using corrplot without hierarchical clustering
+corrplot(
+  filtered_correlation_matrix,
+  method = "color",            # Color-coded plot
+  type = "upper",              # Show only upper triangle to avoid redundancy
+  tl.cex = 0.7,                 # Text label size
+  tl.col = "black",             # Text label color
+  col = colorRampPalette(c("#FFFFFF", "#009688", "#004D40"))(100),  # Green color palette
+  addCoef.col = "black",        # Coefficient color
+  number.cex = 0.6             # Correlation coefficient text size
+)
+```
+
+```{r}
+# Install network package if not installed
+# install.packages("network")
+
+# Load the network package
+library(network)
+
+# Create a network object
+net <- as.network(filtered_correlation_matrix)
+
+# Plot the network
+plot(net, displaylabels = TRUE, boxed.labels = TRUE, label.cex = 0.7)
+
+
+
+```
+

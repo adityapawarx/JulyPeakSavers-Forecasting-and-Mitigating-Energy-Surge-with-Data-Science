@@ -1,0 +1,175 @@
+---
+title: "Future Energy Prediction XGBoost Weather Increase by 5"
+output: html_document
+date: "2023-12-04"
+---
+```{r}
+library(tidyverse)
+# Modeling_df_without_ordinal <- read_csv("C:/Users/Soundarya Ravi/Desktop/Merged_data.csv")
+
+ModelingDf_for_d <- read_csv("C:/Users/Soundarya Ravi/Desktop/Shiny/final_modeling_df.csv")
+```
+```{r}
+New_Dataset_Weather_5 <- ModelingDf_for_d
+```
+```{r}
+New_Dataset_Weather_5$Dry_Bulb_Temperature_C <- New_Dataset_Weather_5$Dry_Bulb_Temperature_C + 5
+```
+```{r}
+#install.packages('xgboost')     # for fitting the xgboost model
+
+#install.packages('caret')       # for general data preparation and model fitting
+
+library(xgboost)
+
+library(caret)  
+```
+```{r}
+#Clear NA before Modeling
+New_Dataset_Weather_5 <- New_Dataset_Weather_5[, colSums(is.na(New_Dataset_Weather_5)) == 0]
+```
+
+```{r}
+# Test and Train Data
+set.seed(0) # Set seed for generating random data.
+
+# CreateDataPartition() function from the caret package to split the original dataset into a training and testing set
+# Split data into training (80%) and testing set (20%)
+parts <- createDataPartition(New_Dataset_Weather_5$out.total_energy_consumption, p = 0.9, list = FALSE)
+train <- New_Dataset_Weather_5[parts,]
+test <-  New_Dataset_Weather_5[-parts,]
+
+# Define predictor and response variables in the training set
+train_x <- data.matrix(train[, -which(names(train) == "out.total_energy_consumption")])
+train_y <- train[["out.total_energy_consumption"]]
+
+# Define predictor and response variables in the testing set
+test_x <- data.matrix(test[, -which(names(train) == "out.total_energy_consumption")])
+test_y <- test[["out.total_energy_consumption"]]
+
+print(c("Length of train_y:", length(train_y)))
+print(c("Number of rows in train_x:", nrow(train_x)))
+
+# Check if lengths match before creating xgb.DMatrix
+stopifnot(length(train_y) == nrow(train_x))
+
+# Continue with the rest of your code...
+#define final training and testing sets
+xgb_train = xgb.DMatrix(data = train_x, label = train_y)
+xgb_test = xgb.DMatrix(data = test_x, label = test_y)
+```
+
+```{r}
+#defining a watchlist
+watchlist = list(train=xgb_train, test=xgb_test)
+
+#fit XGBoost model and display training and testing data at each iteartion
+model = xgb.train(data = xgb_train, max.depth = 3, watchlist=watchlist, nrounds = 100)
+```
+
+```{r}
+#define final model
+model_xgboost = xgboost(data = xgb_train, max.depth = 3, nrounds = 86, verbose = 0)
+
+summary(model_xgboost)
+
+```
+
+```{r}
+#use model to make predictions on test data
+pred_y = predict(model_xgboost, xgb_test)
+```
+
+```{r}
+# Assuming pred_y is your predicted values
+
+# Calculate Mean Squared Error (MSE)
+mse <- mean((test_y - pred_y)^2)
+cat('Mean Squared Error (MSE): ', round(mse, 3), '\n')
+
+# Calculate Root Mean Squared Error (RMSE) using caret package
+rmse <- caret::RMSE(test_y, pred_y)
+cat('Root Mean Squared Error (RMSE): ', round(rmse, 3), '\n')
+
+# Calculate R-squared
+y_test_mean <- mean(test_y)
+tss <- sum((test_y - y_test_mean)^2)
+rss <- sum((test_y - pred_y)^2)  # Using predicted values to calculate residuals
+rsq <- 1 - (rss/tss)
+cat('The R-squared of the test data is ', round(rsq, 3), '\n')
+```
+```{r}
+predictions <- predict(model_xgboost, newdata = xgb_test)
+
+mape <- mean(abs((test$out.total_energy_consumption - predictions) / test$out.total_energy_consumption )) * 100
+
+# Print the result
+print(paste("MAPE:", mape))
+```
+
+Add Predicted Values to the test and train
+```{r}
+#use model to make predictions on test data
+pred_y <- predict(model_xgboost,xgb_test)
+
+pred_x <- predict(model_xgboost,xgb_train)
+```
+
+```{r}
+train$Next_year_Pred <- pred_x
+test$Next_year_Pred <- pred_y
+```
+
+
+
+
+```{r}
+# Combine train and test dataframes
+New_Weather_Increase_Prediction <- rbind(train, test)
+
+# Check the structure of the new dataframe
+str(New_Weather_Increase_Prediction)
+
+```
+```{r}
+# Assuming New_Weather_Increase_Prediction is your dataframe
+New_Weather_Increase_Prediction <- New_Weather_Increase_Prediction[order(New_Weather_Increase_Prediction$bldg_id, New_Weather_Increase_Prediction$time_split_numeric), ]
+
+# Check the sorted dataframe
+head(New_Weather_Increase_Prediction)
+
+
+```
+```{r}
+#Difference In Energy Between Both Years 
+New_Weather_Increase_Prediction$Change_in_energy <- New_Weather_Increase_Prediction$Next_year_Pred - New_Weather_Increase_Prediction$out.total_energy_consumption
+```
+```{r}
+# setwd("C:/Users/Soundarya Ravi/Desktop/Shiny")
+# write.csv(New_Weather_Increase_Prediction,"Predicted_final_weatherplus5.csv",row.names=FALSE)
+```
+```{r}
+Weather_Increase_Predcited_Final <- read_csv("C:/Users/Soundarya Ravi/Desktop/Shiny/Predicted_final_weatherplus5.csv")
+```
+```{r}
+#Percentage Calculation For Increase In Temperature For Overall Data
+# Percentage = (Total Change / Current Year ) * 100
+
+Total_Change = sum(Weather_Increase_Predcited_Final$Change_in_energy)
+Current_Year = sum(Weather_Increase_Predcited_Final$out.total_energy_consumption)
+Percentage = (Total_Change/Current_Year)*100
+
+Total_Change
+Current_Year
+```
+
+
+```{r}
+# Example usage with cat
+message <- "Total Energy Percentage Increase after Increasing the temperature by 5 is:"
+variable_value <- Percentage # Replace this with your actual variable
+
+cat(message, variable_value, "\n")
+
+```
+

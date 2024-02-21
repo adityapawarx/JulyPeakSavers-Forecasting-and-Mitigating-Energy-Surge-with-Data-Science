@@ -1,0 +1,95 @@
+
+## R Markdown
+
+
+```{r }
+file <- '/Users/subhiksha/Downloads/abs_final_data.csv'
+library(tidyverse)
+final_data <- read_csv(file)
+
+final_data$Day <- as.POSIXlt(final_data$time)$mday  # Extract day
+final_data$Hour <- as.POSIXlt(final_data$time)$hour # Extract hour
+final_data <- final_data[,-27]
+
+daily_aggregated_data <- final_data %>%
+  group_by(Day) %>%
+  summarise_all(sum)
+daily_aggregated_data <- daily_aggregated_data[,-28]
+
+library(ggplot2)
+library(tidyr)
+
+day_long_data <- daily_aggregated_data %>%
+  gather(key = "Appliance", value = "EnergyConsumption", -Day)
+
+day_long_aggregated_data <- day_long_data %>%
+  group_by(Appliance) %>%
+  summarise(TotalEnergy = sum(EnergyConsumption)) %>%
+  arrange(desc(TotalEnergy))
+
+colnames(day_long_data)
+day_long_aggregated_data_sum <- day_long_data %>%
+  group_by(Day) %>%
+  summarise(TotalEnergy = sum(EnergyConsumption)) %>%
+  arrange(Day)
+
+  ggplot(day_long_aggregated_data_sum, aes(x = Day, y = TotalEnergy)) +
+  geom_line() +
+  geom_point()+
+  labs(title = "Total Energy Consumption by Day of the Month",
+       x = "Day of the Month",
+       y = "Total Energy Consumption (in kWh)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+
+  ggplot(day_long_data, aes(x = Day, y = EnergyConsumption, color = Appliance)) +
+  geom_line() +
+  labs(title = "Daily Energy Consumption by Appliance",
+       x = "Hour of the Day",
+       y = "Energy Consumption (in kWh)") +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::comma) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+```
+ 
+```{r}
+  
+energy_file <- '/Users/subhiksha/Documents/IDS/ids/Final_energy_data.csv'
+energy_data <- read_csv(energy_file)
+```
+
+```{r}
+colnames(energy_data)
+energy_data<- energy_data[,-c(1)]
+```
+
+```{r}
+energy_data$Day <- as.POSIXlt(energy_data$time)$mday  # Extract day
+energy_data$Hour <- as.POSIXlt(energy_data$time)$hour # Extract hour
+energy_data2<- energy_data[,-1]
+energy_data3<- energy_data2[,-1]
+daily_aggregated_data1 <- energy_data3 %>%
+  group_by(Day) %>%
+  summarise_all(sum)
+
+daily_aggregated_data1 <- daily_aggregated_data1[,-10]
+
+day_long_data1 <- daily_aggregated_data1 %>%
+  gather(key = "Appliance_Category", value = "EnergyConsumption", -Day)
+
+```
+
+```{r}
+ggplot(day_long_data1, aes(x = Day, y = EnergyConsumption, color = Appliance_Category)) +
+  geom_line() +
+  geom_point()+
+  labs(title = "Daily Energy Consumption by Appliance",
+       x = "Day of the month",
+       y = "Energy Consumption (in kWh)") +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::comma) +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))
+
+```

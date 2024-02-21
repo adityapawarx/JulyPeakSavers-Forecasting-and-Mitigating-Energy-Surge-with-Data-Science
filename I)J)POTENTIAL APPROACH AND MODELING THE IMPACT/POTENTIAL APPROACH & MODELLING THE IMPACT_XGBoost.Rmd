@@ -1,0 +1,181 @@
+```{r}
+library(tidyverse)
+Ordinality_File <- read.csv("C:/Users/Soundarya Ravi/Desktop/Shiny/Team2_Final_SEW_Ordinal_Modelling1.csv")
+View(Ordinality_File)
+```
+
+```{r}
+columns_to_remove <- c("Next_year_Pred", "Change_in_energy")
+sorted_data_for_IJ<- Ordinality_File[, !(names(Ordinality_File) %in% columns_to_remove)]
+```
+
+
+```{r}
+columns_to_drop <- c(
+  "out.kitchen_energy_consumption",
+  "out.laundry_energy_consumption",
+  "out.heating_cooling_energy_consumption",
+  "out.water_heating_energy_consumption",
+  "out.electrical_appliances_energy_consumption",
+  "out.renewable_energy_energy_consumption",
+  "out.outdoor_appliances_energy_consumption"
+)
+sorted_data_for_IJ <- sorted_data_for_IJ[, !(names(sorted_data_for_IJ) %in% columns_to_drop)]
+
+```
+
+```{r}
+# Ordinal coding for in.hvac_cooling_efficiency
+#in_hvac_cooling_efficiency_mapping <- c(
+#  "AC, SEER 15"=1, "AC, SEER 13"=2, "None"=0, "AC, SEER 10"=4,
+#  "Heat Pump"=5, "Room AC, EER 10.7"=6, "Room AC, EER 8.5"=7,
+#  "AC, SEER 8"=8, "Room AC, EER 9.8"=9, "Room AC, EER 12.0"=10
+#)
+#static_house_filtered$in.hvac_cooling_efficiency <- #as.numeric(in_hvac_cooling_efficiency_mapping[static_house_filtered$in.hvac_cooling_efficien#cy])
+
+## Ordinal coding for in.cooling_setpoint (assuming the given order)
+#in_cooling_setpoint_mapping <- c(
+ # "72F"=7, "76F"=9, "70F"=6, "60F"=1, "78F"=10, "75F"=8, "68F"=5, "62F"=2, "65F"=3,
+  #"80F"=11, "67F"=4
+#)
+```
+
+
+```{r}
+
+
+sorted_data_for_IJ$Dry_Bulb_Temperature_C <- sorted_data_for_IJ$Dry_Bulb_Temperature_C + 5
+```
+
+```{r}
+set.seed(123)  # Setting seed for reproducibility
+unique_bldg_ids <- unique(sorted_data_for_IJ$bldg_id)
+unique_values <- c(10, 6, 5, 1, 2)
+
+# Shuffle the unique values for randomness
+shuffled_values <- sample(unique_values)
+
+# Create a mapping between bldg_id and shuffled_values
+value_mapping <- rep(shuffled_values, length.out = length(unique_bldg_ids))
+
+# Assign the values to the in.hvac_cooling_efficiency column
+sorted_data_for_IJ$in.hvac_cooling_efficiency <- value_mapping[match(sorted_data_for_IJ$bldg_id, unique_bldg_ids)]
+
+
+```
+
+
+```{r}
+library(xgboost)
+library(caret) 
+```
+
+
+```{r}
+# Test and Train Data
+set.seed(0) # Set seed for generating random data.
+
+# CreateDataPartition() function from the caret package to split the original dataset into a training and testing set
+# Split data into training (80%) and testing set (20%)
+parts <- createDataPartition(sorted_data_for_IJ$out.total_energy_consumption, p = 0.8, list = FALSE)
+train <- sorted_data_for_IJ[parts,]
+test <-  sorted_data_for_IJ[-parts,]
+
+# Define predictor and response variables in the training set
+train_x <- data.matrix(train[, -which(names(train) == "out.total_energy_consumption")])
+train_y <- train[["out.total_energy_consumption"]]
+
+# Define predictor and response variables in the testing set
+test_x <- data.matrix(test[, -which(names(train) == "out.total_energy_consumption")])
+test_y <- test[["out.total_energy_consumption"]]
+
+print(c("Length of train_y:", length(train_y)))
+print(c("Number of rows in train_x:", nrow(train_x)))
+
+# Check if lengths match before creating xgb.DMatrix
+stopifnot(length(train_y) == nrow(train_x))
+
+# Continue with the rest of your code...
+#define final training and testing sets
+xgb_train = xgb.DMatrix(data = train_x, label = train_y)
+xgb_test = xgb.DMatrix(data = test_x, label = test_y)
+
+```
+
+
+```{r}
+#defining a watchlist
+watchlist = list(train=xgb_train, test=xgb_test)
+
+#fit XGBoost model and display training and testing data at each iteartion
+model = xgb.train(data = xgb_train, max.depth = 3, watchlist=watchlist, nrounds = 100)
+```
+
+```{r}
+#use model to make predictions on test data
+pred_y <-  predict(model, xgb_test)
+pred_x <-  predict(model, xgb_train)
+```
+
+```{r}
+# Assuming pred_y is your predicted values
+
+# Calculate Mean Squared Error (MSE)
+mse <- mean((test_y - pred_y)^2)
+cat('Mean Squared Error (MSE): ', round(mse, 3), '\n')
+
+# Calculate Root Mean Squared Error (RMSE) using caret package
+rmse <- caret::RMSE(test_y, pred_y)
+cat('Root Mean Squared Error (RMSE): ', round(rmse, 3), '\n')
+
+# Calculate R-squared
+y_test_mean <- mean(test_y)
+tss <- sum((test_y - y_test_mean)^2)
+rss <- sum((test_y - pred_y)^2)  # Using predicted values to calculate residuals
+rsq <- 1 - (rss/tss)
+cat('The R-squared of the test data is ', round(rsq, 3), '\n')
+```
+
+```{r}
+predictions_xgb <- predict(model, newdata = xgb_test)
+
+mape <- mean(abs((test$out.total_energy_consumption - predictions_xgb) / test$out.total_energy_consumption )) * 100
+
+# Print the result
+print(paste("MAPE:", mape))
+```
+```{r}
+train$Possible_New_Energy <- pred_x
+test$Possible_New_Energy <- pred_y
+```
+
+```{r}
+combined_df <- rbind(train,test)
+```
+
+```{r}
+sorted_combined_df <- combined_df[order(combined_df$bldg_id, combined_df$time_split), ]
+```
+
+
+```{r}
+sorted_combined_df$New_Change <- sorted_combined_df$Possible_New_Energy - sorted_combined_df$out.total_energy_consumption
+```
+
+```{r}
+Percentage_difference <- (sum(sorted_combined_df$New_Change)/sum(sorted_combined_df$out.total_energy_consumption)) * 100
+Percentage_difference
+```
+
+```{r}
+sum(sorted_combined_df$Possible_New_Energy)
+```
+
+
+
+```{r}
+
+setwd("C:/Users/Soundarya Ravi/Desktop/Shiny")
+write.csv(sorted_combined_df, "For_Suggested_Impact.csv", row.names = FALSE)
+```
+

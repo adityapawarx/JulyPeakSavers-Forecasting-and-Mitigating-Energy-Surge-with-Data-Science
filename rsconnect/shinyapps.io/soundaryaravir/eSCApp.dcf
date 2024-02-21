@@ -1,0 +1,12 @@
+name: eSCApp
+title: eSCApp
+username: soundaryaravir
+account: soundaryaravir
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 10740232
+bundleId: 8018469
+url: https://soundaryaravir.shinyapps.io/eSCApp/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

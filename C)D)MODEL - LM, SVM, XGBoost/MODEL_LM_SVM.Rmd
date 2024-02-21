@@ -1,0 +1,108 @@
+---
+title: "LM AND SVM MODELS"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r}
+library(tidyverse)
+# Modeling_df_without_ordinal <- read_csv("C:/Users/Soundarya Ravi/Desktop/Merged_data.csv")
+
+Model_new <- read_csv("C:/Users/Soundarya Ravi/Desktop/Shiny/final_modeling_df.csv")
+
+```
+
+
+```{r}
+Modeling_ordinality <- Model_new
+
+# Assuming 'processed_data' is your data frame
+Modeling_ordinality <- Modeling_ordinality[, colSums(is.na(Modeling_ordinality)) == 0]
+
+# Now 'processed_data' contains only columns without any missing values
+
+```
+
+
+```{r}
+# setwd("C:/Users/Soundarya Ravi/Desktop/Shiny/")
+# 
+# write.csv(Modeling_ordinality, file ="Ordinality_Final_Merge.csv",row.names=FALSE)
+```
+
+```{r}
+# Install and load necessary packages
+# install.packages(c("dplyr", "caret"))
+
+# Load packages
+library(dplyr)
+library(caret)
+
+index <- createDataPartition(Modeling_ordinality$out.total_energy_consumption, p = 0.8, list = FALSE)
+train_data <- Modeling_ordinality[index, ]
+test_data <- Modeling_ordinality[-index, ]
+
+# Function to handle character columns and build the linear regression model
+build_lm_model <- function(data) {
+  # Identify numeric and character columns
+  numeric_cols <- sapply(data, is.numeric)
+  char_cols <- sapply(data, is.character)
+
+  # Convert character columns to factors
+  data[, char_cols] <- lapply(data[, char_cols], as.factor)
+
+  # Build linear regression model
+  lm_model <- lm(out.total_energy_consumption ~ ., data = data[, numeric_cols | char_cols])
+
+  return(lm_model)
+}
+
+# Build the linear regression model on the training set
+lm_model <- build_lm_model(train_data)
+
+# Make predictions on the test set
+predictions <- predict(lm_model, newdata = test_data)
+#print(predictions)
+# Evaluate the model, e.g., calculate RMSE (Root Mean Squared Error) or other metrics
+# ...
+
+# View summary of the linear regression model
+summary(lm_model)
+#test_data$predictions <- predictions
+mape <- mean(abs((test_data$out.total_energy_consumption - predictions) / test_data$out.total_energy_consumption )) * 100
+
+# Print the result
+print(paste("MAPE:", mape))
+
+```
+
+```{r}
+# # Install and load necessary packages
+# # install.packages(c("e1071", "caret"))
+ library(e1071)
+ library(caret)
+#
+# # Set a seed for reproducibility
+# set.seed(123)
+#
+# # Build SVM regression model
+ svm_reg_model <- svm(out.total_energy_consumption ~ ., data = train_data, kernel = "radial")
+#
+# # Display the summary of the model
+ summary(svm_reg_model)
+#
+ predictions <- predict(svm_reg_model, newdata = test_data)
+# #print(predictions)
+# # Evaluate the model, e.g., calculate RMSE (Root Mean Squared Error) or other metrics
+# # ...
+#
+# # View summary of the linear regression model
+# summary(svm_reg_model)
+#test_data$predictions <- predictions
+ mape <- mean(abs((test_data$out.total_energy_consumption - predictions) / test_data$out.total_energy_consumption )) * 100
+#Print the result
+print(paste("MAPE:", mape))
+
+
+```
+

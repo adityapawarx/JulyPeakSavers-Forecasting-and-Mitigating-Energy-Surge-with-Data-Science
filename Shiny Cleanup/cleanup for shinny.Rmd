@@ -1,0 +1,87 @@
+Final _ Subdivision H
+
+
+
+```{r}
+library(tidyverse)
+Merged_non_od_file <- read_csv("C:/Users/Soundarya Ravi/Desktop/Shiny/G,HI,J/Merged_data.csv")
+Predicted_weather <- read_csv("C:/Users/Soundarya Ravi/Desktop/Shiny/G,HI,J/Predicted_final_weatherplus5.csv")
+
+```
+
+
+```{r}
+
+subset_df <- Predicted_weather[, c("bldg_id","time_split_numeric",
+ "Next_year_Pred", "Change_in_energy")]
+
+
+```
+
+```{r}
+str(Merged_non_od_file$time_split)
+# Assuming 'Merged_non_od_file' is your dataframe
+# Assuming 'time_split' is the existing column you want to encode
+
+# Create a mapping for encoding
+time_split_mapping <- c("Late Night" = 1, "Early Morning" = 2, "Morning" = 3, "Noon" = 4, "Evening" = 5, "Night" = 6)
+
+# Add the new column 'time_split_numeric' based on the encoding
+Merged_non_od_file$time_split_numeric <- time_split_mapping[Merged_non_od_file$time_split]
+
+# Display the first few rows of the updated dataframe
+head(Merged_non_od_file)
+
+
+
+
+```
+```{r}
+# Assuming 'Merged_non_od_file' and 'subset_df' are your dataframes
+# Assuming 'bldg_id' and 'time_split_numeric' are the common columns
+
+# Merge the dataframes based on 'bldg_id' and 'time_split_numeric'
+merged_data <- merge(Merged_non_od_file, subset_df, by = c("bldg_id", "time_split_numeric"))
+
+# Display the first few rows of the merged dataframe
+head(merged_data)
+
+
+
+
+```
+```{r}
+# Assuming 'merged_data' is your merged dataframe
+# Assuming 'bldg_id' and 'time_split_numeric' are the columns to sort by
+
+# Sort the dataframe based on 'bldg_id' and 'time_split_numeric'
+sorted_data <- merged_data[order(merged_data$bldg_id, merged_data$time_split_numeric), ]
+
+# Display the sorted dataframe
+head(sorted_data)
+
+```
+
+```{r}
+# Assuming 'sorted_data' is your dataframe
+
+# Remove specified columns
+columns_to_remove <- c("...1", "time_range.y")
+sorted_data <- sorted_data[, !names(sorted_data) %in% columns_to_remove]
+
+# Process the 'in.income' column to keep the maximum value in the range
+sorted_data$in.income <- sapply(strsplit(sorted_data$in.income, "-"), function(x) as.numeric(x[2]))
+
+# Display the modified dataframe
+head(sorted_data)
+
+```
+```{r}
+setwd("C:/Users/Soundarya Ravi/Desktop/Shiny/G,HI,J/")
+write.csv(sorted_data,"Final_Merged_For_Shiny_Geo.csv",row.names=FALSE)
+```
+
+```{r}
+sorted_data <- read.csv("C:/Users/Soundarya Ravi/Desktop/Shiny/G,HI,J/Final_Merged_For_Shiny_Geo.csv")
+```
+

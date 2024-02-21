@@ -1,0 +1,74 @@
+---
+title: "Untitled"
+output: html_document
+date: "2023-12-06"
+---
+
+```{r }
+file <- '/Users/subhiksha/Downloads/Final_Merged_For_Shiny_Geo.csv'
+library(tidyverse)
+peak_energy_file <- read_csv(file)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+nrow(peak_energy_file)
+colnames(peak_energy_file)
+summary(peak_energy_file$out.total_energy_consumption)
+summary(peak_energy_file$Next_year_Pred)
+#unique(peak_energy_file$in.county)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(readr)
+# Data aggregation
+grouped_data <- peak_energy_file %>%
+  group_by(time_split, in.county) %>%
+  summarize(Total_Energy_Consumption = sum(out.total_energy_consumption, na.rm = TRUE),
+            Avg_Latitude = mean(in.weather_file_latitude, na.rm = TRUE),
+            Avg_Longitude = mean(in.weather_file_longitude, na.rm = TRUE),
+            City_Name = first(in.weather_file_city[!is.na(in.weather_file_city)])) %>%
+  ungroup()
+
+
+city_labels <- data.frame(label = grouped_data$City_Name, 
+                          lon = grouped_data$Avg_Longitude, 
+                          lat = grouped_data$Avg_Latitude)
+
+```
+
+```{r}
+sc_map <- map_data("state", region = "south carolina")
+
+```
+
+```{r}
+#install.packages("ggrepel")
+library(ggrepel)
+  ggplot() +
+  geom_polygon(data = sc_map, aes(x = long, y = lat, group = group), fill = "white", color = "black") +
+  geom_point(data = grouped_data, aes(x = Avg_Longitude, y = Avg_Latitude, size = Total_Energy_Consumption, color = Total_Energy_Consumption), alpha = 0.7) +
+  scale_size_continuous(range = c(1, 4))+
+  geom_text(data = city_labels, aes(label = label, x = lon, y = lat), size = 3, hjust = 1, vjust = 1) +
+  scale_color_viridis_c() +
+  scale_size(range = c(3, 10)) +
+  labs(title = "Total Energy Consumption by City",
+       x = "Longitude",
+       y = "Latitude",
+       size = "Total Energy Consumption",
+       color = "Total Energy Consumption") +
+  theme_minimal() +
+  coord_fixed(1.3)  # Hides the legend for size
+```
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

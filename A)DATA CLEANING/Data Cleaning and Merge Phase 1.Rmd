@@ -1,0 +1,340 @@
+
+```{r pressure, echo=FALSE}
+# install.packages("arrow")
+# install.packages("tidyverse)
+library(arrow)
+library(tidyverse)
+ 
+ 
+# 1. Static House Data
+house_data_path <-  "https://intro-datascience.s3.us-east-2.amazonaws.com/SC-data/static_house_info.parquet"
+static_house_data <-  read_parquet(house_data_path)
+view(static_house_data)
+ 
+#2. Energy Usage Data
+energy_data_path <- "https://intro-datascience.s3.us-east-2.amazonaws.com/SC-data/2023-houseData/.parquet"
+energy_usage_data <- read_parquet(energy_data_path)
+view(energy_usage_data)
+ 
+energy_data_path1 <- "https://intro-datascience.s3.us-east-2.amazonaws.com/SC-data/2023-houseData/65.parquet"
+energy_usage_data1 <- read_parquet(energy_data_path1)
+view(energy_usage_data1)
+ 
+#3. Meta Data File
+Meta_data <- read_csv("C:/Users/Soundarya Ravi/Downloads/data_dictionary.csv")
+view(Meta_data)
+ 
+#4. Weather Data 
+Weather_data <- read_csv("C:/Users/Soundarya Ravi/Downloads/G4500010.csv")
+view(Weather_data)
+
+# Unique Buildings
+unique_building_id <- unique(static_house_data$bldg_id)
+class(unique_building_id)
+paste0(length(unique_building_id))
+
+```
+
+```{r}
+energy_path <- "https://intro-datascience.s3.us-east-2.amazonaws.com/SC-data/2023-houseData/"
+list_of_dfs_final <- list()
+# Define the iteration points
+iteration_list <- c(1500, 3000, 4500, 5710)
+
+for (iter in iteration_list) {
+  list_of_dfs <- list()
+  cat("---------------------------------------------> New Iter : ", iter)
+  
+  # Filter parent list for each iteration - This is the list of Buildings that we will load
+  building_id_filtered_list <- unique_building_id[seq_len(iter)]
+  
+  # All elements in building_id_filtered_list
+  for (i in seq_along(building_id_filtered_list)) {
+    elem <- building_id_filtered_list[i]
+    path <- paste0(energy_path, as.character(elem), ".parquet")
+    
+    completition_status <- i * 100 / length(building_id_filtered_list)
+    print(path)
+    cat(" Completion Status: ", completition_status, "%", " Iteration: ", iter, " where i = ", i)
+    
+    # Filter for July and add Building Number
+    df <- read_parquet(path)
+    df <- subset(df, grepl("2018-07", time))
+    df$bldg_id <- elem
+    cat(" Datatype of df: ", class(df))
+    
+    # Add DF to List
+    list_of_dfs[[i]] <- df
+    
+    # Break Loop at 10% completion
+    # if (completition_status > iter) {break}
+  }
+  
+  # Concat Dataframes
+  pre_final_df <- do.call(rbind, list_of_dfs)
+  
+  # Add DF to Master List
+  list_of_dfs_final[[iter]] <- pre_final_df
+  # Size of DF - Check
+}
+# Combine all dataframes into one
+final_df <- do.call(rbind, list_of_dfs_final)
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+library(tidyverse)
+energy_merged_path <- read_csv("C:/Users/Soundarya Ravi/Desktop/Shiny/energy_final.csv")
+```
+
+
+```{r}
+dim(energy_merged_path)
+
+df <- head(energy_merged_path, 1000)
+view(df)
+```
+
+
+
+```{r}
+
+#Merging Up the Weather based on the county ID
+print(unique(static_house_data$in.county))
+
+list_county <- c("G4500910", "G4500730", "G4500710", "G4500790", "G4500450", "G4500150", "G4500350", "G4500190", "G4500830", 
+  "G4500510", "G4500070", "G4500670", "G4500750", "G4500290", "G4500490", "G4500130", "G4500630", "G4500870", 
+  "G4500550", "G4500010", "G4500430", "G4500890", "G4500850", "G4500770", "G4500030", "G4500590", "G4500610", 
+  "G4500250", "G4500530", "G4500210", "G4500410", "G4500570", "G4500690", "G4500310", "G4500090", "G4500470", 
+  "G4500050", "G4500330", "G4500650", "G4500230", "G4500270", "G4500370", "G4500110", "G4500170", "G4500390", 
+  "G4500810")
+length(list_county)
+
+
+```
+
+
+```{r}
+# Create an empty data frame to store the merged data
+merged_df <- data.frame()
+
+# List of county codes
+list_county <- c("G4500910", "G4500730", "G4500710", "G4500790", "G4500450", "G4500150", "G4500350", "G4500190", "G4500830", 
+  "G4500510", "G4500070", "G4500670", "G4500750", "G4500290", "G4500490", "G4500130", "G4500630", "G4500870", 
+  "G4500550", "G4500010", "G4500430", "G4500890", "G4500850", "G4500770", "G4500030", "G4500590", "G4500610", 
+  "G4500250", "G4500530", "G4500210", "G4500410", "G4500570", "G4500690", "G4500310", "G4500090", "G4500470", 
+  "G4500050", "G4500330", "G4500650", "G4500230", "G4500270", "G4500370", "G4500110", "G4500170", "G4500390", 
+  "G4500810")
+
+# Iterate through each county code
+for (county in list_county) {
+  url <- paste0('https://intro-datascience.s3.us-east-2.amazonaws.com/SC-data/weather/2023-weather-data/', county, '.csv')
+  
+  # Use tryCatch to handle errors
+  tryCatch({
+    df_county <- read.csv(url)
+    merged_df <- rbind(merged_df, df_county)
+  }, error = function(e) {
+    cat("Error reading file for county", county, ":", conditionMessage(e), "\n")
+  })
+}
+
+
+# Print the first few rows of the merged data frame
+print(head(merged_df))
+```
+
+
+```{r}
+# Create an empty data frame to store the merged data
+merged_df_new<- data.frame()
+
+# List of county codes
+list_county <- c("G4500910", "G4500730", "G4500710", "G4500790", "G4500450", "G4500150", "G4500350", "G4500190", "G4500830", 
+  "G4500510", "G4500070", "G4500670", "G4500750", "G4500290", "G4500490", "G4500130", "G4500630", "G4500870", 
+  "G4500550", "G4500010", "G4500430", "G4500890", "G4500850", "G4500770", "G4500030", "G4500590", "G4500610", 
+  "G4500250", "G4500530", "G4500210", "G4500410", "G4500570", "G4500690", "G4500310", "G4500090", "G4500470", 
+  "G4500050", "G4500330", "G4500650", "G4500230", "G4500270", "G4500370", "G4500110", "G4500170", "G4500390", 
+  "G4500810")
+
+# Iterate through each county code
+for (county in list_county) {
+  url <- paste0('https://intro-datascience.s3.us-east-2.amazonaws.com/SC-data/weather/2023-weather-data/', county, '.csv')
+  
+  # Use tryCatch to handle errors
+  tryCatch({
+    df_county <- read.csv(url)
+    # Add a new column 'county_id' with the current county code
+    df_county$county_id <- county
+    merged_df_new <- rbind(merged_df_new, df_county)
+  }, error = function(e) {
+    cat("Error reading file for county", county, ":", conditionMessage(e), "\n")
+  })
+}
+
+# Print the first few rows of the merged data frame
+print(head(merged_df_new))
+
+
+
+```
+
+
+```{r}
+view(merged_df_new)
+
+```
+
+
+```{r}
+energy_merged_path<- na.omit(energy_merged_path)
+```
+
+```{r}
+# Assuming merged_df has a column named date_time
+
+# Load the dplyr package
+library(dplyr)
+
+# Filter merged_df for the month of July
+merged_df_new<- merged_df_new %>%
+  filter(format(as.Date(date_time), "%Y-%m") == "2018-07")
+
+# Print the first few rows of the filtered data frame
+print(head(merged_df_new))
+nrow(merged_df_new)
+
+```
+
+
+```{r}
+setwd("C:/Users/Soundarya Ravi/Desktop/Shiny/")
+
+write.csv(final_df, file ="energy_final.csv",row.names = FALSE)
+```
+
+```{r}
+
+weather_data_merged_with_county <- merged_df_new
+
+```
+
+```{r}
+setwd("C:/Users/Soundarya Ravi/Desktop/Shiny/")
+
+write.csv(weather_data_merged_with_county, file ="weather_final_county.csv",row.names = FALSE)
+
+
+```
+```{r}
+#view(static_house_data)
+print(unique(static_house_data$in.ahs_region))
+setwd("C:/Users/Soundarya Ravi/Desktop/Shiny/")
+```
+
+
+
+
+```{r}
+print(unique(static_house_data$in.hvac_system_is_faulted
+))
+```
+
+
+```{r}
+
+meta_data_path <- "https://intro-datascience.s3.us-east-2.amazonaws.com/SC-data/data_dictionary.csv"
+input_df_metadata <- read_csv(meta_data_path,show_col_types = FALSE)
+meta_data_df=as.data.frame(input_df_metadata)
+view(meta_data_df)
+```
+```{r}
+view(weather_data_merged)
+```
+
+```{r}
+
+str(weather_data_merged_with_county)
+
+```
+```{r}
+#Grouping the time frame of Weather File
+#str(weather_data_merged)
+# Assuming 'weather_data_merged' contains data for multiple counties
+
+# Assuming 'weather_data_merged' contains data for multiple counties
+
+result_df <- weather_data_merged_with_county %>%
+  mutate(hour = hour(strptime(date_time, format = "%Y-%m-%d %H:%M:%S")),
+         time_split = case_when(
+           hour %in% c(0, 1, 2, 3) ~ "Late Night",
+           hour %in% c(4, 5, 6, 7, 8) ~ "Early Morning",
+           hour %in% c(9, 10, 11, 12) ~ "Morning",
+           hour %in% c(13, 14, 15) ~ "Noon",
+           hour %in% c(16, 17, 18) ~ "Evening",
+           hour %in% c(19, 20, 21, 22, 23) ~ "Night",
+           TRUE ~ "Other"
+         )) %>%
+  group_by(county_id, time_split) %>%
+  summarise(
+    Dry_Bulb_Temperature_C = mean(Dry.Bulb.Temperature...C.),
+    Relative_Humidity = mean(Relative.Humidity....),
+    Wind_Speed_m_s = mean(Wind.Speed..m.s.),
+    Wind_Direction_Deg = mean(Wind.Direction..Deg.),
+    Global_Horizontal_Radiation_W_m2 = mean(Global.Horizontal.Radiation..W.m2.),
+    Direct_Normal_Radiation_W_m2 = mean(Direct.Normal.Radiation..W.m2.),
+    Diffuse_Horizontal_Radiation_W_m2 = mean(Diffuse.Horizontal.Radiation..W.m2.)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    time_range = case_when(
+      time_split == "Late Night" ~ "00:00:00 to 03:00:00",
+      time_split == "Early Morning" ~ "04:00:00 to 08:00:00",  # Adjust as needed
+      time_split == "Morning" ~ "09:00:00 to 12:00:00",         # Adjust as needed
+      time_split == "Noon" ~ "13:00:00 to 15:00:00",            # Adjust as needed
+      time_split == "Evening" ~ "16:00:00 to 18:00:00",         # Adjust as needed
+      time_split == "Night" ~ "19:00:00 to 23:00:00",           # Adjust as needed
+      TRUE ~ "Other"
+    )
+  ) %>%
+  arrange(county_id, time_range)
+
+# Print the result
+print(result_df)
+
+
+```
+```{r}
+
+# Assuming 'result_df' is your existing dataframe
+
+weather_july_timeframe <- result_df %>%
+  select(county_id, time_range, time_split, everything())
+
+# Print the new dataframe
+print(weather_july_timeframe)
+
+
+```
+```{r}
+setwd("C:/Users/Soundarya Ravi/Desktop/Shiny/")
+
+write.csv(weather_july_timeframe, file ="weather_tf_july_276.csv",row.names = FALSE)
+
+```
+
+
+
+```{r}
+energy_merged_july <- read_csv("C:/Users/Soundarya Ravi/Downloads/energydataaa_idsProj.csv") #subhiksha
+```
+```{r}
+#energy_combined_features <- read_csv("C:/Users/Soundarya Ravi/Downloads/combined_dependent_energy_data.csv") #subhiksha
+
+head(energy_combined_features)
+head(energy_merged_july)
+str(energy_combined_features)
+```
+

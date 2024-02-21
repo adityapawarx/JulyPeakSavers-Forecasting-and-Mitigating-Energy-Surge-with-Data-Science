@@ -1,0 +1,63 @@
+---
+title: "Untitled"
+output: html_document
+date: "2023-12-01"
+---
+
+```{r}
+#install.packages('arrow')
+library('arrow')
+df_houses <- read_parquet('https://intro-datascience.s3.us-east-2.amazonaws.com/SC-data/static_house_info.parquet')
+
+
+#install.packages('tidyverse')
+library(tidyverse)
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r }
+createCombined <- function(){
+  df_houses_cut <- subset(df_houses, select=-c(weight, upgrade, applicability, in.ahs_region, in.ashrae_iecc_climate_zone_2004, in.ashrae_iecc_climate_zone_2004_2_a_split, in.cec_climate_zone, in.census_division, 
+                                               in.census_division_recs, in.census_region, in.clothes_washer_presence, in.corridor, in.dehumidifier, in.door_area, in.doors, in.eaves, in.electric_vehicle, 
+                                               in.emissions_electricity_folders, in.emissions_electricity_units, in.emissions_electricity_values_or_filepaths, in.emissions_fossil_fuel_units, in.emissions_fuel_oil_values, 
+                                               in.emissions_natural_gas_values, in.emissions_propane_values, in.emissions_scenario_names, in.emissions_types, in.emissions_wood_values, in.generation_and_emissions_assessment_region, 
+                                               in.geometry_building_horizontal_location_mf, in.geometry_building_horizontal_location_sfa, in.geometry_building_level_mf, in.geometry_building_number_units_mf, in.geometry_building_number_units_sfa, 
+                                               in.geometry_building_type_acs,in.geometry_building_type_height, in.geometry_building_type_recs, in.geometry_stories_low_rise, in.geometry_story_bin, in.heating_setpoint_has_offset, 
+                                               in.holiday_lighting, in.hot_water_distribution, in.hvac_has_shared_system, in.hvac_secondary_heating_efficiency, in.hvac_secondary_heating_type_and_fuel, in.hvac_shared_efficiencies, 
+                                               in.hvac_system_is_faulted, in.hvac_system_single_speed_ac_airflow, in.hvac_system_single_speed_ac_charge, in.hvac_system_single_speed_ashp_airflow, in.hvac_system_single_speed_ashp_charge, 
+                                               in.interior_shading, in.iso_rto_region, in.lighting_interior_use, in.lighting_other_use, in.location_region, in.mechanical_ventilation, in.natural_ventilation, in.neighbors, in.overhangs, 
+                                               in.plug_loads, in.radiant_barrier, in.schedules, in.simulation_control_run_period_begin_day_of_month, in.simulation_control_run_period_begin_month, in.simulation_control_run_period_calendar_year, 
+                                               in.simulation_control_run_period_end_day_of_month, in.simulation_control_run_period_end_month, in.simulation_control_timestep, in.solar_hot_water, in.state, in.units_represented, in.water_heater_in_unit, 
+                                               upgrade.hvac_cooling_efficiency))
+  #houses list
+  final_energy_df <- data.frame()
+  for(house in 1:nrow(df_houses_cut)) {
+    bldg_id <- df_houses[house, 'bldg_id']
+    df_bldg <- read_parquet(paste0('https://intro-datascience.s3.us-east-2.amazonaws.com/SC-data/2023-houseData/',bldg_id,'.parquet'))
+    df_bldg$bldg_id <- bldg_id
+    df_bldg_july <- df_bldg[format(df_bldg$time, "%Y-%m") == "2018-07", ]
+    final_energy_df <- rbind(final_energy_df,df_bldg_july )
+  }
+  
+  write.csv(final_energy_df, "myenergydata1_idsProj.csv", row.names = TRUE)
+  return (final_energy_df)
+}
+createCombined()
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r}
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

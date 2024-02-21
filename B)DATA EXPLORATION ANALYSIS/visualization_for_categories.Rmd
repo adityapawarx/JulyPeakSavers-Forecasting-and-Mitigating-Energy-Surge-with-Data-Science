@@ -1,0 +1,115 @@
+---
+
+```{r}
+
+library(dplyr)
+library(tidyverse)
+file_path <- '/Users/subhiksha/Downloads/Team2_Final_SEW_Ordinal_Modelling1.csv'
+model <- read_csv(file_path)
+
+low_income_threshold <- 39999
+middle_income_threshold <- 99999
+
+# Categorize the 'in.income' into three groups
+model <- model %>%
+  mutate(income_category = case_when(
+    in.income <= low_income_threshold ~ "Low",
+    in.income > low_income_threshold & in.income <= middle_income_threshold ~ "Middle",
+    in.income > middle_income_threshold ~ "High"
+  ))
+
+# Summing the total energy consumption for each income category
+total_energy_consumption <- model %>%
+  group_by(income_category) %>%
+  summarize(TotalEnergyConsumption = sum(out.total_energy_consumption, na.rm = TRUE))
+
+# Print the result
+print(total_energy_consumption)
+
+# Reorder the income categories
+total_energy_consumption$income_category <- factor(total_energy_consumption$income_category, levels = c("Low", "Middle", "High"))
+
+# Plot the bar graph with customized color and ordered y-axis
+ ggplot(total_energy_consumption, aes(x = TotalEnergyConsumption, y = income_category,fill=income_category)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("green", "blue", "red"))
+  labs(title = "Total Energy Consumption by Income Category",
+         x = "Total Energy Consumption" ,
+         y = "Income Category") +
+  theme_minimal() 
+  
+
+##################################################################################################
+
+## in.sqft column
+  
+file <- '/Users/subhiksha/Downloads/Final_Merged_For_Shiny_Geo.csv'
+library(tidyverse)
+peak_energy_file <- read_csv(file)
+
+quantiles <- quantile(peak_energy_file$in.sqft, probs = c(0, 0.25, 0.75, 1), na.rm = TRUE)
+
+# Create the sqft_category column
+peak_energy_file$sqft_category <- cut(peak_energy_file$in.sqft, 
+                          breaks = quantiles, 
+                          labels = c("Low", "Medium", "High"), 
+                          include.lowest = TRUE)
+
+total_energy_by_sqft <- peak_energy_file %>%
+  group_by(sqft_category) %>%
+  summarize(TotalEnergy = sum(out.total_energy_consumption, na.rm = TRUE)) %>%
+  ungroup() 
+
+  ggplot(total_energy_by_sqft, aes(x = TotalEnergy, y = sqft_category,fill = sqft_category)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("green", "blue", "red")) + 
+  labs(title = "Total Energy Consumption by Square Feet Category",
+  x = "Total Energy Consumption" ,
+  y = "Sqft Category") +
+  theme_minimal() 
+
+
+#########################################################################################################
+
+#in.federal_poverty_level
+
+total_energy_bypoverty <- peak_energy_file %>%
+  group_by(in.federal_poverty_level) %>%
+  summarize(TotalEnergyConsumption = sum(out.total_energy_consumption, na.rm = TRUE))
+
+  ggplot(total_energy_bypoverty, aes(x = TotalEnergyConsumption, y = in.federal_poverty_level ,fill = in.federal_poverty_level)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Total Energy Consumption for Different Federal Poverty Level",
+       x = "Total Energy Consumption" ,
+       y = "Federal Poverty Level") +
+  theme_minimal() 
+
+############################################################################################################
+
+##in.heating_fuel
+
+
+total_energy_by_Heatingfuel <- peak_energy_file %>%
+  group_by(in.heating_fuel) %>%
+  summarize(TotalEnergyConsumption = sum(out.total_energy_consumption, na.rm = TRUE))
+
+total_energy_by_Heatingfuel <- total_energy_by_Heatingfuel[total_energy_by_Heatingfuel$in.heating_fuel != "None", ]
+
+ ggplot(total_energy_by_Heatingfuel, aes(x = TotalEnergyConsumption, y = in.heating_fuel ,fill = in.heating_fuel)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Total Energy Consumption for Different Fuel Type",
+       x = "Total Energy Consumption" ,
+       y = "Fuel Type") +
+  theme_minimal() 
+
+###############################################################################################################
+
+
+
+```
+
+
+
+
+
+
